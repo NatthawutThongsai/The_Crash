@@ -5,6 +5,7 @@ import java.util.Random;
 import UI.SmallInfoLabel;
 import UI.VEHICLE;
 import javafx.animation.AnimationTimer;
+import javafx.concurrent.Task;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.image.ImageView;
@@ -29,6 +30,7 @@ public class GameViewManager {
 	private static final int GAME_HEIGHT = 700;
 
 	private Stage menuStage;
+	private ScoreViewManager saveStage;
 	private Vehicle vehicle;
 
 	private boolean isLeftKeyPressed;
@@ -55,24 +57,35 @@ public class GameViewManager {
 	private final static String GOLD_STAR_IMAGE = "file:res/image/star_gold.png";
 
 	private final static int STAR_RADIUS = 12;
-	private final static int OBSTACLE_RADIUS = 20;
-	private final static int VEHICLE_RADIUS = 20;
-	
+	private final static int OBSTACLE_RADIUS = 30;
+	private final static int VEHICLE_RADIUS = 30;
+	private Thread thread;
+
 	AudioClip soundEndGame;
 	AudioClip soundGainScore;
 	AudioClip soundLoseLife;
-	
 
 	public GameViewManager() {
 		initializeStage();
 		createKeyListener();
 		randomPositionGenerator = new Random();
-		
+
 		soundEndGame = new AudioClip("file:res/sound/sfx_lose.wav");
-		soundGainScore = new AudioClip("file:res/sound/sfx_gainstar.wav");;
-		soundLoseLife = new AudioClip("file:res/sound/sfx_corride.wav");;
+		soundGainScore = new AudioClip("file:res/sound/sfx_gainstar.wav");
+		soundLoseLife = new AudioClip("file:res/sound/sfx_corride.wav");
 
 	}
+
+	final Task<?> task = new Task<Object>() {
+
+		@Override
+		protected Object call() throws Exception {
+			AudioClip audio = new AudioClip("file:res/sound/Race-car-sounds.wav");
+			audio.setVolume(0.5f);
+			audio.play();
+			return null;
+		}
+	};
 
 	private void createKeyListener() {
 		gameScene.setOnKeyPressed(new EventHandler<KeyEvent>() {
@@ -117,14 +130,15 @@ public class GameViewManager {
 		this.menuStage.hide();
 		createBackground();
 		createVehicle(choosenVehicle);
-
+		thread = new Thread(task);
+		thread.start();
 		createGameElements(choosenVehicle);
 		createGameLoop();
 		gameStage.show();
 	}
 
 	private void createGameElements(VEHICLE choosenVehicle) {
-		vehicleLife = vehicle.getHitpoint()-1;
+		vehicleLife = vehicle.getHitpoint() - 1;
 		star = new ImageView(GOLD_STAR_IMAGE);
 		setNewElementPosition(star);
 		gamePane.getChildren().add(star);
@@ -132,7 +146,7 @@ public class GameViewManager {
 		pointsLabel.setLayoutX(460);
 		pointsLabel.setLayoutY(20);
 		gamePane.getChildren().add(pointsLabel);
-		vehicleLifes = new ImageView[vehicleLife+1];
+		vehicleLifes = new ImageView[vehicleLife + 1];
 		for (int i = 0; i < vehicleLifes.length; i++) {
 			vehicleLifes[i] = new ImageView(choosenVehicle.getUrlLife());
 			vehicleLifes[i].setFitHeight(40);
@@ -142,7 +156,7 @@ public class GameViewManager {
 			gamePane.getChildren().add(vehicleLifes[i]);
 		}
 
-		obstacle1 = new ImageView[3];
+		obstacle1 = new ImageView[7];
 		for (int i = 0; i < obstacle1.length; i++) {
 			ImageView ob1 = new ImageView(OBSTACLE_1);
 			ob1.setFitHeight(100);
@@ -151,7 +165,7 @@ public class GameViewManager {
 			setNewElementPosition(obstacle1[i]);
 			gamePane.getChildren().add(obstacle1[i]);
 		}
-		obstacle2 = new ImageView[3];
+		obstacle2 = new ImageView[7];
 		for (int i = 0; i < obstacle2.length; i++) {
 			ImageView ob2 = new ImageView(OBSTACLE_2);
 			ob2.setFitHeight(80);
@@ -196,13 +210,13 @@ public class GameViewManager {
 
 	private void createVehicle(VEHICLE choosenVehicle) {
 		String type = choosenVehicle.gettypeVehicle();
-		if(type.equals("F1")) {
+		if (type.equals("F1")) {
 			vehicle = new f1(choosenVehicle.geturl());
-		}else if(type.equals("TANK")) {
+		} else if (type.equals("TANK")) {
 			vehicle = new tank(choosenVehicle.geturl());
-		}else if(type.equals("NORMAL")) {
+		} else if (type.equals("NORMAL")) {
 			vehicle = new normal(choosenVehicle.geturl());
-		}else if(type.equals("PICKUP")) {
+		} else if (type.equals("PICKUP")) {
 			vehicle = new pickup(choosenVehicle.geturl());
 		}
 		gamePane.getChildren().add(vehicle);
@@ -297,7 +311,7 @@ public class GameViewManager {
 		if (VEHICLE_RADIUS + STAR_RADIUS > calculateDistance(vehicle.getLayoutX() + 49, star.getLayoutX() + 15,
 				vehicle.getLayoutY() + 37, star.getLayoutY() + 15)) {
 			setNewElementPosition(star);
-			points+=10;
+			points += 10;
 			increaseLife();
 			soundGainScore.play();
 			String textToSet = "POINTS: ";
@@ -307,7 +321,7 @@ public class GameViewManager {
 			pointsLabel.setText(textToSet + points);
 		}
 		for (int i = 0; i < obstacle1.length; i++) {
-			if (VEHICLE_RADIUS + OBSTACLE_RADIUS > calculateDistance(vehicle.getLayoutX(),
+			if (VEHICLE_RADIUS + OBSTACLE_RADIUS > calculateDistance(vehicle.getLayoutX() + 10,
 					obstacle1[i].getLayoutX() + 20, vehicle.getLayoutY() + 37, obstacle1[i].getLayoutY() + 20)) {
 				removeLife();
 				setNewElementPosition(obstacle1[i]);
@@ -315,7 +329,7 @@ public class GameViewManager {
 			}
 		}
 		for (int i = 0; i < obstacle2.length; i++) {
-			if (VEHICLE_RADIUS + OBSTACLE_RADIUS > calculateDistance(vehicle.getLayoutX(),
+			if (VEHICLE_RADIUS + OBSTACLE_RADIUS > calculateDistance(vehicle.getLayoutX() + 10,
 					obstacle2[i].getLayoutX() + 20, vehicle.getLayoutY() + 37, obstacle2[i].getLayoutY() + 20)) {
 				removeLife();
 				setNewElementPosition(obstacle2[i]);
@@ -329,9 +343,12 @@ public class GameViewManager {
 		vehicleLife--;
 		if (vehicleLife < 0) {
 			soundEndGame.play();
-			gameStage.close();
-			gameTimer.stop();
-			menuStage.show();
+			saveStage = new ScoreViewManager();
+			saveStage.createSaveScore(menuStage);
+			
+//			gameStage.close();
+//			gameTimer.stop();
+//			menuStage.show();
 		}
 	}
 
